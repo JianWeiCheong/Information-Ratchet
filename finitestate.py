@@ -1,5 +1,14 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
+"""
+Class file for Tape and Ratchet objects.
+
+TODO:
+    1.) Better way to define HMM for input tape.
+    2.) Support multiple ratchets.
+    3.) Support infinite states ratchet.
+    4.) Support 2-ways ratchet.
+"""
 
 import random
 import numpy as np
@@ -22,7 +31,7 @@ class Tape:
         self.markovChain = 0
 
     def generateSequenceBias(self, bias):
-        """Generate sequence as a bias coin flip."""
+        """Generate sequence as a bias coin flip. Bias favoured towards 0."""
 
         if bias < 0 or bias > 1:
             raise ValueError("Bias must be a value between 0 and 1.")
@@ -33,12 +42,18 @@ class Tape:
                 self.bias = bias
 
     def generateSequenceIndiv(self, bit):
+        """Append individual bits to sequence."""
+
         if bit != 0 and bit != 1:
             raise ValueError("Bit must be either 0 or 1.")
         else:
             self.sequence.append(bit)
 
+        self.correlation = 1
+
     def generateSequenceHMM(self, startState, transMat, transBit):
+        """Generate sequence with a HMM."""
+
         outStates = []
         states = np.arange(0, len(startState), 1)
         newState = 0
@@ -66,6 +81,8 @@ class Tape:
         self.hmmMatrix = transMat
 
     def calcEntropy(self):
+        """Calculate single-symboled entropy of sequence."""
+
         if self.sequence == []:
             raise TypeError(
                 "Tape sequence is empty, make sure you have called a generation method."
@@ -97,8 +114,12 @@ class Tape:
         return
 
     def calcEntropyRate(self):
+        """Calculate entropy rate of sequence."""
+
         if self.sequence == []:
-            raise TypeError("Tape sequence is empty, make sure you have called a generation method.")
+            raise TypeError(
+                "Tape sequence is empty, make sure you have called a generation method."
+            )
 
         # If generated with bias
         if self.correlation == 0:
@@ -172,9 +193,9 @@ class Ratchet:
 
         if not 1 in evals.round(8):
             raise ValueError(
-                "Transition matrix must fulfils detailed balance.")
+                "Transition matrix must have columns summed up to 1.")
 
-        numStates = len(transMat) / 2
+        numStates = int(len(transMat) / 2)
 
         vecIndex = np.argmin(abs(evals - 1.0))
         statDist = evecs[:, vecIndex].real
@@ -185,15 +206,22 @@ class Ratchet:
         self.statDist = statDist
         self.numStates = numStates
 
+        self.bitEnergy = [0, 0]
+        self.stateEnergy = np.zeros(numStates)
+        self.jointEnergy = np.zeros(2 * numStates)
+
+        self.work = 0
+
         self.dynamicStatesIn = []
         self.dynamicEnergiesIn = []
         self.dynamicStatesOut = []
         self.dynamicEnergiesOut = []
         self.transStates = []
         self.transEnergies = []
-        self.work = 0
 
     def startStationaryDistributionRun(self, inTape, initRatchetState):
+        """Start simulation with stationary distribution."""
+
         outTape = Tape(inTape.length)
         inStates = []
         outStates = []
@@ -220,6 +248,8 @@ class Ratchet:
                                 initRatchetState,
                                 randTrans=False,
                                 numTrans=1):
+        """Start simulation with fixed number of transitions."""
+
         outTape = Tape(inTape.length)
         inStates = []
         outStates = []
@@ -254,7 +284,9 @@ class Ratchet:
 
         return outTape, inStates
 
-    def addEnergyDynamics(self, state, energy, inOut=None):
+    def addEnergyDynamicsOLD(self, state, energy, inOut=None):
+        """OLD Scheme. Add energy dynamics."""
+
         if inOut == 'IN':
             self.dynamicStatesIn.append(state)
             self.dynamicEnergiesIn.append(energy)
@@ -265,7 +297,32 @@ class Ratchet:
             self.transStates.append(state)
             self.transEnergies.append(energy)
 
-    def calcEnergyDynamics(self, inStates, outStates):
+    def addEnergetics(self, state, energy, bit=False, transition=False):
+        """Define energy of states and bits."""
+
+        if bit == True and transition == True:
+            raise ValueError("bit and transition cannot both be True.")
+
+        if transition == True:
+            self.transStates.append(state)
+            self.transEnergies.append(energy)
+
+        elif bit == True:
+            self.bitEnergy[state] = energy
+
+        else:
+            self.stateEnergy[state] = energy
+
+    def finaliseEnergetics(self):
+        """Finalises ratchet's energetics."""
+
+        for i in range(2):
+            for j in range(self.numStates):
+                self.jointEnergy[
+                    j + 2 * i] = self.stateEnergy[j] + self.bitEnergy[i]
+
+    def calcEnergyDynamicsOLD(self, inStates, outStates):
+        """OLD Scheme. Calculate energy due to energy dynamics."""
 
         transStates = np.array(self.transStates)
 
@@ -284,4 +341,33 @@ class Ratchet:
                 elif inStates[i] == transStates[j, 1] and outStates[
                         i] == transStates[j, 0]:
                     self.work -= self.transEnergies[j]
+        return self.work
+
+    def calcEnergetics(self, inStates, outStates):
+        """Calculate energetics."""
+
+        transStates = np.array(self.transStates)
+
+        for i in range(len(inStates)):
+            self.work += self.jointEnergy[outStates[i]] - self.jointEnergy[
+                inStates[i]]
+            #if i > 0:
+            #    self.work += self.jointEnergy[inStates[i]] - self.jointEnergy[
+            #        outStates[i - 1]]
+
+            for j in range(len(transStates)):
+                if inStates[i] == transStates[j, 0] and outStates[
+                        i] == transStates[j, 1]:
+                    self.work += self.transEnergies[j]
+                elif inStates[i] == transStates[j, 1] and outStates[
+                        i] == transStates[j, 0]:
+                    self.work -= self.transEnergies[j]
+
+        return self.work
+
+    def calcTEST(self, inStates, outStates):
+        for i in range(len(inStates)):
+            self.work += np.log(self.transMat[inStates[i], outStates[i]] /
+                                self.transMat[outStates[i], inStates[i]])
+
         return self.work
