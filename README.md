@@ -66,3 +66,5 @@ https://arxiv.org/abs/1507.01537
 ![screenshot](https://github.com/SataJW/Information-Ratchet/blob/master/images/spectrumcompare.png)
 
 For explanations about the plot, read the paper.
+
+The plot is plotted in example_program.py, note that it requires matplotlib and [tqdm](https://github.com/tqdm/tqdm) for progress bar.
