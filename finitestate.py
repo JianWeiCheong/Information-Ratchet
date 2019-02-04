@@ -1,4 +1,3 @@
-#!/bin/bash
 # -*- coding: utf-8 -*-
 """
 Class file for Tape and Ratchet objects.
