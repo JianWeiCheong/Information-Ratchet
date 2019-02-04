@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import scipy.linalg
 import matplotlib.pyplot as plt
 
 from tqdm import tqdm
