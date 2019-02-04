@@ -11,6 +11,12 @@
 
 Here, we will simulate a 2-states information ratchet processing information on a input tape sequence of '1' and '0' generated with a statistical bias (bias coin flip). We wish to find the change in information content of the tape after being processed by the information ratchet, as well as the average work being extracted.
 
+This system was investigated by:
+
+Boyd, A. B., Mandal, D., & Crutchfield, J. P. (2016). Identifying functional thermodynamics in autonomous Maxwellian ratchets. New Journal of Physics, 18(2), 023049.
+
+https://arxiv.org/abs/1507.01537
+
 First import the module.
 ```python
 from finitestate import Tape, Ratchet
@@ -50,3 +56,13 @@ aveWork = totalWork / inputTape.length
 ```
 
 ### Analytical and Numerical Result Comparison
+
+Here, we replicated the result of:
+
+Boyd, A. B., Mandal, D., & Crutchfield, J. P. (2016). Identifying functional thermodynamics in autonomous Maxwellian ratchets. New Journal of Physics, 18(2), 023049.
+
+https://arxiv.org/abs/1507.01537
+
+![screenshot](https://github.com/SataJW/Information-Ratchet/blob/master/images/spectrumcompare.png)
+
+For explanations about the plot, read the paper.
